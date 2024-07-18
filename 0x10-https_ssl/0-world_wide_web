@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
+# A Bash script that will display information about the subdomains
+
+# Configure my domain zone:
+# www     --> 311224-lb-01  52.3.247.153
+# web-01  --> 311224-web-01 54.236.52.50
+# web-02  --> 311224-web-02 18.206.207.234
+# lb-01   --> 311224-lb-01  52.3.247.153
 
 # Function to get and display subdomain information
 get_subdomain_info() {
   local subdomain=$1
   local domain=$2
-  local record=$(dig "$subdomain.$domain" +short)
-  if [ -n "$record" ]; then
-    echo "The subdomain $subdomain is a A record and points to $record"
+
+  # Use dig to get DNS information for the subdomain
+  local result=$(dig "$subdomain.$domain" | grep -A1 'ANSWER SECTION:' | tail -1 | awk '{print $4, $5}')
+
+  # Check if the result is not empty
+  if [ -n "$result" ]; then
+    # Output the formatted subdomain information
+    echo "The subdomain $subdomain is a $result"
   else
+    # Output a message indicating the subdomain does not exist
     echo "The subdomain $subdomain does not exist"
   fi
 }
@@ -18,17 +31,19 @@ if [ $# -lt 1 ]; then
   exit 1
 fi
 
-# Set domain name
+# Set domain name from the first argument
 domain="$1"
+
+# Default subdomains to query
+subdomains=("www" "lb-01" "web-01" "web-02")
 
 # Check if a specific subdomain is provided
 if [ $# -eq 2 ]; then
-  get_subdomain_info "$2" "$domain"
+  # If a specific subdomain is provided, query only that subdomain
+  subdomain="$2"
+  get_subdomain_info "$subdomain" "$domain"
 else
-  # Default subdomains to query
-  subdomains=("www" "lb-01" "web-01" "web-02")
-
-  # Loop through default subdomains and display information
+  # If no specific subdomain is provided, query the default subdomains
   for subdomain in "${subdomains[@]}"; do
     get_subdomain_info "$subdomain" "$domain"
   done
